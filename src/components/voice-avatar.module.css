@@ -1,0 +1,30 @@
+.avatar {
+  position: absolute;
+  inset: 0;
+}
+.stage {
+  inline-size: 100%;
+  block-size: 100%;
+}
+.stage canvas {
+  display: block;
+  max-inline-size: 100%;
+}
+.stage canvas:focus-visible {
+  outline: 3px solid #0b7aef;
+  outline-offset: -3px;
+}
+.avatar p,
+.avatar button {
+  position: absolute;
+  inset-inline-start: 50%;
+  translate: -50% 0;
+  inline-size: min(90%, 36rem);
+  text-align: center;
+}
+.avatar p {
+  inset-block-start: 45%;
+}
+.avatar button {
+  inset-block-start: 60%;
+}

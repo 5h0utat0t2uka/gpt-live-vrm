@@ -11,14 +11,14 @@ git-hooks.lib.${system}.run {
       args = [ "--maxkb=500" ];
       excludes = [
         "^public/models/avatar\\.vrm$"
-        "^public/models/animation\\.vrma$"
+        "^docs/gpt-live\\.png$"
       ];
     };
     node-tests = {
       enable = true;
       name = "node-test";
       entry = "${fixedNode.pnpm}/bin/pnpm test";
-      files = "^(apps|packages)/.*\\.tsx?$";
+      files = "^(src|tests)/.*\\.tsx?$";
       pass_filenames = false;
     };
     biome = {
