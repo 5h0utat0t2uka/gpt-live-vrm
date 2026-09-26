@@ -74,7 +74,7 @@ body {
 		  inline-size: min(95cqi, 1080px);
 			margin-inline: auto;
 			> h1 {
-			  font-size: 1.8rem;
+			  font-size: 1.7rem;
 			}
 			> nav {
   			place-items: end;

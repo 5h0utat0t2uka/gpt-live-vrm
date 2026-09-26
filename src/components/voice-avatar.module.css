@@ -1,6 +1,7 @@
 .avatar {
   position: absolute;
   inset: 0;
+  block-size: 100cqb;
 }
 .stage {
   inline-size: 100%;

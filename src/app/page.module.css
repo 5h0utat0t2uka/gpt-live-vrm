@@ -8,10 +8,8 @@
 
 .nav {
   position: absolute;
-  /*inset-block-start: calc(90px + 16px);
-  inset-inline-end: max(16px, env(safe-area-inset-right, calc(100cqi - 460px)));*/
+  inline-size: max-content;
   inset-inline-start: 50%;
-  /*transform: translateX(-50%);*/
   translate: -50% 0;
   inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 24px);
   display: grid;
@@ -34,49 +32,22 @@
     cursor: pointer;
     background: none;
     color: black;
+    @media(any-hover: hover) {
+      &:hover {
+        color: #3939f4;
+      }
+    }
+
     > .label {
-      font-size: 0.75rem;
+      font-size: 0.65rem;
+      white-space: nowrap;
     }
   }
 }
-/*.main button {
-  font: inherit;
-  font-size: 0.875rem;
-  min-block-size: 44px;
-  padding: 8px 12px;
-  border: 1px solid #8a9e92;
-  border-radius: 6px;
-  color: var(--foreground);
-  cursor: pointer;
-}
-.main button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-.main button:not(:disabled):hover {
-  background: #e6eee9;
-}
-.main button.start {
-  background: #245c46;
-  color: #fff;
-  border-color: #245c46;
-}
-.main button.start:not(:disabled):hover {
-  background: #174530;
-}
-.main :is(button, a):focus-visible {
-  outline: 3px solid #0b7aef;
-  outline-offset: 3px;
-}*/
-/*.callState {
-  margin-inline-start: 6px;
-  font-size: 0.75rem;
-}*/
+
 .panel {
   position: fixed;
   inset: auto;
-  /*inset-block-start: calc(var(--header-height) + 76px);
-  inset-inline-end: max(16px, env(safe-area-inset-right, 0px));*/
   inset-block-end: calc(80px + 24px + 24px);
   inset-inline-start: 50%;
   translate: -50% 0;
@@ -84,13 +55,10 @@
   max-block-size: max(44px, calc(50dvh - var(--header-height) - var(--nav-height) - 48px));
   margin: 0;
   padding: 16px;
-  /*border: 1px solid #8a9e92;*/
   border: 1px solid color-mix(in oklch, black 15%, transparent);
   border-radius: 16px;
-  /*color: var(--foreground);*/
   color: black;
-  /*background: var(--background);*/
-  background: color-mix(in oklch, white 10%, transparent);
+  background: color-mix(in oklch, white 50%, transparent);
   backdrop-filter: blur(16px);
 
   overflow: auto;
@@ -113,8 +81,9 @@
   }
 
   .status strong {
-    padding: 0.25em 0.8em;
+    padding: 0.5em 1em;
     border-radius: calc(infinity * 1px);
+    font-size: 0.8rem;
     &[data-phase="idle"], &[data-phase="connecting"] {
       color: #3939f4;
       background: #c1c1f9;
@@ -134,7 +103,7 @@
   }
   .status p {
     margin-block: 1em;
-    font-size: 0.875rem;
+    font-size: 0.8rem;
   }
   .buttons {
     display: flex;
@@ -142,12 +111,17 @@
     gap: 12px;
     > button {
       font: inherit;
-      font-size: 0.875rem;
+      font-size: 0.8rem;
       padding: 8px 12px;
       border: 1px solid black;
       border-radius: 8px;
+      background: white;
       color: black;
       cursor: pointer;
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
       @media(any-hover: hover) {
         &:not(:disabled):hover {
           background: black;
@@ -156,6 +130,12 @@
       }
     }
   }
+}
+
+.main:has(> [id="controls-panel"]:popover-open) .nav > button[popovertarget="controls-panel"],
+.main:has(> [id="transcript-panel"]:popover-open) .nav > button[popovertarget="transcript-panel"],
+.main:has(> [id="sources-panel"]:popover-open) .nav > button[popovertarget="sources-panel"] {
+  color: #3939f4;
 }
 
 .notice {

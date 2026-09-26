@@ -16,7 +16,7 @@ const phaseLabels = {
   connecting: "接続中",
   connected: "会話中",
   closing: "終了中",
-  ended: "終了",
+  ended: "終了済",
   error: "エラー",
 };
 
