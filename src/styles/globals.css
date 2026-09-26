@@ -1,14 +1,36 @@
 :root {
 	--background: #ffffff;
 	--foreground: #171717;
+	--hdr-gradient: radial-gradient(farthest-corner circle at top left in oklch,
+    oklch(95% .25 160) 0%,
+    26%,
+    oklch(75% .5 180)  0%,
+    46%,
+    oklch(75% .5 210)  0%,
+    60%,
+    oklch(75% .5 230)  0%,
+    82%,
+    oklch(75% .5 260)  0%
+  );
 	--header-height: 90px;
-	--footer-height: 90px;
+	--nav-height: 80px;
 }
 
 @media (prefers-color-scheme: dark) {
 	:root {
 		--background: #0a0a0a;
 		--foreground: #ededed;
+		--hdr-gradient: radial-gradient(farthest-corner circle at top left in oklch,
+      oklch(69% 0.25 208) 0%,
+      26%,
+      oklch(59% 0.42 198) 0%,
+      46%,
+      oklch(51% 0.50 210) 0%,
+      60%,
+      oklch(65% 0.46 273) 0%,
+      82%,
+      oklch(63% 0.48 277) 0%
+    );
 	}
 }
 
@@ -18,25 +40,27 @@ html {
 
 html,
 body {
-	max-inline-size: 100vi;
+	max-inline-size: 100%;
 	overflow-x: hidden;
 }
 
 body {
+  background: var(--hdr-gradient);
   position: relative;
 	container-type: size;
-	min-block-size: 100dvh;
+	min-block-size: 100lvh;
 	/*display: flex;
 	flex-direction: column;*/
 	color: var(--foreground);
-	background: var(--background);
+	/*background: var(--background);*/
 	font-family: Arial, Helvetica, sans-serif;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 
 	display: grid;
 	grid-template-columns: 1fr;
-	grid-template-rows: auto 1fr auto;
+	/*grid-template-rows: auto 1fr auto;*/
+	grid-template-rows: auto 1fr;
 	> header {
 	  block-size: var(--header-height);
 		display: grid;
@@ -50,7 +74,7 @@ body {
 		  inline-size: min(95cqi, 1080px);
 			margin-inline: auto;
 			> h1 {
-			  font-size: 1.5rem;
+			  font-size: 1.8rem;
 			}
 			> nav {
   			place-items: end;
@@ -59,19 +83,12 @@ body {
           display: flex;
           align-items: center;
           gap: 16px;
+          a {
+            text-decoration: underline;
+            font-size: 0.875rem;
+          }
         }
 			}
-		}
-	}
-	> footer {
-	  block-size: var(--footer-height);
-		display: grid;
-		place-items: center;
-		z-index: 1;
-		pointer-events: none;
-		> .container {
-		  inline-size: min(95cqi, 1080px);
-				margin-inline: auto;
 		}
 	}
 }

@@ -1,0 +1,15 @@
+.main {
+	inline-size: min(95cqi, 1080px);
+	margin-inline: auto;
+	/*padding: 64px 24px 40px;*/
+	font-family: system-ui, sans-serif;
+	line-height: 1.7;
+	a {
+	  display: inline-block;
+	  margin-block-start: 1rem;
+    text-decoration: underline;
+    &[target="_blank"] {
+      margin-block-start: 0;
+    }
+  }
+}

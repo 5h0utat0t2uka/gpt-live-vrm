@@ -43,17 +43,20 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </h1>
             <nav>
               <div className="container">
-                <Link href="/about">About</Link>
+                <Link href="https://github.com/5h0utat0t2uka/gpt-live-vrm" target="_blank" rel="noopener noreferrer">
+                  GitHub
+                </Link>
+                <Link href="/privacy">Privacy</Link>
               </div>
             </nav>
           </div>
         </header>
         {children}
-        <footer>
+        {/*<footer>
           <div className="container">
             <small>© 2026</small>
           </div>
-        </footer>
+        </footer>*/}
       </body>
     </html>
   );
