@@ -13,7 +13,7 @@
     oklch(75% .5 260)  0%
   );
 	--header-height: 90px;
-	--nav-height: 80px;
+	--nav-height: 70px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -74,7 +74,7 @@ body {
 		  inline-size: min(95cqi, 1080px);
 			margin-inline: auto;
 			> h1 {
-			  font-size: 1.7rem;
+			  font-size: 1.3rem;
 			}
 			> nav {
   			place-items: end;
