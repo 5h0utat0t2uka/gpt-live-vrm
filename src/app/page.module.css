@@ -14,7 +14,7 @@
   inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 24px);
   display: grid;
   grid-template-columns: repeat(3,1fr);
-  block-size: 80px;
+  block-size: var(--nav-height);
   place-content: center;
   gap: 24px;
   padding: 8px 24px;
@@ -34,7 +34,7 @@
     color: black;
     @media(any-hover: hover) {
       &:hover {
-        color: #3939f4;
+        color: #0b7aef;
       }
     }
 
@@ -85,8 +85,8 @@
     border-radius: calc(infinity * 1px);
     font-size: 0.8rem;
     &[data-phase="idle"], &[data-phase="connecting"] {
-      color: #3939f4;
-      background: #c1c1f9;
+      color: #0b7aef;
+      background: #d7e4ff;
     }
     &[data-phase="closing"], &[data-phase="ended"] {
       color: #5e5e5e;
@@ -135,7 +135,7 @@
 .main:has(> [id="controls-panel"]:popover-open) .nav > button[popovertarget="controls-panel"],
 .main:has(> [id="transcript-panel"]:popover-open) .nav > button[popovertarget="transcript-panel"],
 .main:has(> [id="sources-panel"]:popover-open) .nav > button[popovertarget="sources-panel"] {
-  color: #3939f4;
+  color: #0b7aef;
 }
 
 .notice {
