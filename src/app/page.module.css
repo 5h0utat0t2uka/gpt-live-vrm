@@ -9,13 +9,15 @@
   inline-size: max-content;
   inset-inline-start: 50%;
   translate: -50% 0;
-  inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 24px);
+  /*inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 24px);*/
+  inset-block-end: 24px;
   display: grid;
   grid-template-columns: repeat(3,1fr);
   block-size: var(--nav-height);
   place-content: center;
   gap: 24px;
-  padding: 8px 24px;
+  gap: 8px;
+  padding: 8px;
   border-radius: calc(infinity * 1px);
   border: 1px solid color-mix(in oklch, black 15%, transparent);
   background: color-mix(in oklch, white 50%, transparent);
@@ -25,14 +27,16 @@
     flex-direction: column;
     align-items: center;
     gap: 4px;
-    padding: 8px;
+    padding: 8px 28px;
     border: none;
+    border-radius: calc(infinity * 1px);
     cursor: pointer;
     background: none;
     color: black;
     @media(any-hover: hover) {
       &:hover {
         color: #0b7aef;
+        background: color-mix(in oklch, black 5%, transparent);
       }
     }
     > .label {
@@ -45,7 +49,8 @@
 .panel {
   position: fixed;
   inset: auto;
-  inset-block-end: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 24px + 24px);
+  /*inset-block-end: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 24px + 24px);*/
+  inset-block-end: calc(var(--nav-height) + 24px + 24px);
   inset-inline-start: 50%;
   translate: -50% 0;
   inline-size: min(600px, calc(100vi - 32px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
@@ -105,7 +110,7 @@
     }
     > p {
       font-size: 0.8rem;
-      line-height: 1.5;
+      line-height: 1.4;
     }
   }
   .buttons {
@@ -139,6 +144,7 @@
 .main:has(> [id="transcript-panel"]:popover-open) .nav > button[popovertarget="transcript-panel"],
 .main:has(> [id="sources-panel"]:popover-open) .nav > button[popovertarget="sources-panel"] {
   color: #0b7aef;
+  background: #d7e4ff;
 }
 
 .notice {
