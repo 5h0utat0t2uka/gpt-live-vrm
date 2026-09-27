@@ -5,7 +5,17 @@ export default function Privacy() {
   return (
     <main className={styles.main}>
       <p>
-        このアプリは録音・会話履歴を保存しませんが、送信後のデータには
+        このアプリは
+        <a
+          href="https://openai.com/ja-JP/index/introducing-gpt-live-1-in-the-api/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          GPT-Live-1 API
+        </a>
+        を利用した音声チャットのデモです。
+        <br />
+        録音・会話履歴を保存しませんが、送信後のデータには
         <a href="https://developers.openai.com/api/docs/guides/your-data" target="_blank" rel="noopener noreferrer">
           OpenAI のデータ保持ポリシー
         </a>

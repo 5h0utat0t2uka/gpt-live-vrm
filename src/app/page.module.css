@@ -1,9 +1,7 @@
 .main {
-  /*position: relative;*/
   min-block-size: 0;
   font-family: system-ui, sans-serif;
   line-height: 1.7;
-  /*background: var(--background);*/
 }
 
 .nav {
@@ -37,7 +35,6 @@
         color: #0b7aef;
       }
     }
-
     > .label {
       font-size: 0.65rem;
       white-space: nowrap;
@@ -48,11 +45,11 @@
 .panel {
   position: fixed;
   inset: auto;
-  inset-block-end: calc(80px + 24px + 24px);
+  inset-block-end: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 24px + 24px);
   inset-inline-start: 50%;
   translate: -50% 0;
   inline-size: min(600px, calc(100vi - 32px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
-  max-block-size: max(44px, calc(50dvh - var(--header-height) - var(--nav-height) - 48px));
+  max-block-size: max(200px, calc(50lvh - var(--header-height) - var(--nav-height) - 48px));
   margin: 0;
   padding: 16px;
   border: 1px solid color-mix(in oklch, black 15%, transparent);
@@ -79,31 +76,37 @@
       cursor: pointer;
     }
   }
-
-  .status strong {
-    padding: 0.5em 1em;
-    border-radius: calc(infinity * 1px);
-    font-size: 0.8rem;
-    &[data-phase="idle"], &[data-phase="connecting"] {
-      color: #0b7aef;
-      background: #d7e4ff;
+  .status {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 16px;
+    align-items: center;
+    margin-block-end: 1rem;
+    > strong {
+      padding: 0.5em 1em;
+      border-radius: calc(infinity * 1px);
+      font-size: 0.8rem;
+      &[data-phase="idle"], &[data-phase="connecting"] {
+        color: #0b7aef;
+        background: #d7e4ff;
+      }
+      &[data-phase="closing"], &[data-phase="ended"] {
+        color: #5e5e5e;
+        background: #d2d2d2;
+      }
+      &[data-phase="connected"] {
+        color: #13c40b;
+        background: #c1f9c4;
+      }
+      &[data-phase="error"] {
+        color: #fb2b2b;
+        background: #f9c1c9;
+      }
     }
-    &[data-phase="closing"], &[data-phase="ended"] {
-      color: #5e5e5e;
-      background: #d2d2d2;
+    > p {
+      font-size: 0.8rem;
+      line-height: 1.5;
     }
-    &[data-phase="connected"] {
-      color: #13c40b;
-      background: #c1f9c4;
-    }
-    &[data-phase="error"] {
-      color: #fb2b2b;
-      background: #f9c1c9;
-    }
-  }
-  .status p {
-    margin-block: 1em;
-    font-size: 0.8rem;
   }
   .buttons {
     display: flex;

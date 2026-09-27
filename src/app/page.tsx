@@ -214,7 +214,7 @@ export default function Home() {
           <p>
             {state.searches > 0
               ? "検索は完了しました。参照 URL はまだ届いていません。天気など、参照 URL が返されない結果もあります。"
-              : "WEB検索の参照はまだありません。"}
+              : "WEBの参照はまだありません。"}
           </p>
         )}
         <ul>
