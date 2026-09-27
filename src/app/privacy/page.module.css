@@ -3,7 +3,10 @@
 	margin-inline: auto;
 	/*padding: 64px 24px 40px;*/
 	font-family: system-ui, sans-serif;
-	line-height: 1.5;
+	line-height: 1.4;
+	> p:not(:last-of-type) {
+    margin-block-end: 1rem;
+  }
 	a {
 	  display: inline-block;
 	  margin-block-start: 1rem;
