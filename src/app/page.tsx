@@ -133,7 +133,10 @@ export default function Home() {
         </div>
         <div className={styles.buttons}>
           <button type="button" className={styles.start} onClick={start} disabled={active}>
-            チャットを開始
+            開始
+          </button>
+          <button type="button" onClick={() => session.current?.stop()} disabled={!active || state.phase === "closing"}>
+            終了
           </button>
           <button
             type="button"
@@ -141,10 +144,7 @@ export default function Home() {
             disabled={state.phase !== "connected"}
             aria-pressed={state.muted}
           >
-            {state.muted ? "マイクを再開" : "マイクをミュート"}
-          </button>
-          <button type="button" onClick={() => session.current?.stop()} disabled={!active || state.phase === "closing"}>
-            チャットを終了
+            {state.muted ? "再開" : "ミュート"}
           </button>
         </div>
         {state.playbackBlocked && (
