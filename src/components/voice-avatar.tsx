@@ -10,10 +10,12 @@ import {
   Mesh,
   type Object3D,
   PerspectiveCamera,
+  Raycaster,
   Scene,
   ShaderMaterial,
   Spherical,
   Texture,
+  Vector2,
   Vector3,
   WebGLRenderer,
 } from "three";
@@ -25,6 +27,11 @@ import styles from "./voice-avatar.module.css";
 const BREATH_SECONDS = 4.8;
 const BREATH_CHEST_DEGREES = 0.9;
 const BREATH_SHOULDER_DEGREES = 0.85;
+const CLICK_MOVE_PX = 6;
+const SMILE_RISE_SECONDS = 0.2;
+const SMILE_HOLD_SECONDS = 1;
+const SMILE_FADE_SECONDS = 0.48;
+const SMILE_STRENGTH = 0.18;
 
 function disposeModel(root: Object3D) {
   const images = new Set<ImageBitmap>();
@@ -68,6 +75,59 @@ export default function VoiceAvatar({ getLevel }: { getLevel: () => number }) {
     const camera = new PerspectiveCamera(30, 1, 0.01, 100);
     let mouth = 0;
     let lastFrame = 0;
+    let smile = 0;
+    let smileElapsed = Number.POSITIVE_INFINITY;
+    const raycaster = new Raycaster();
+    const pointer = new Vector2();
+    const headMeshes = new Set<Mesh>();
+    const activePointers = new Set<number>();
+    let clickStart: { id: number; x: number; y: number } | undefined;
+
+    function hitsHead(event: PointerEvent) {
+      if (!renderer || !vrm) return false;
+      const rect = renderer.domElement.getBoundingClientRect();
+      if (!rect.width || !rect.height) return false;
+      pointer.set(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        1 - ((event.clientY - rect.top) / rect.height) * 2,
+      );
+      raycaster.setFromCamera(pointer, camera);
+      // Check the nearest visible mesh, so a click cannot pass through the body to the head.
+      const hit = raycaster.intersectObject(vrm.scene, true)[0];
+      return !!hit && hit.object instanceof Mesh && headMeshes.has(hit.object);
+    }
+
+    function triggerSmile() {
+      if (vrm) smileElapsed = 0;
+    }
+
+    function pointerDown(event: PointerEvent) {
+      activePointers.add(event.pointerId);
+      clickStart = undefined;
+      if (activePointers.size === 1 && event.isPrimary && event.button === 0 && hitsHead(event)) {
+        clickStart = { id: event.pointerId, x: event.clientX, y: event.clientY };
+      }
+    }
+
+    function pointerMove(event: PointerEvent) {
+      if (
+        clickStart?.id === event.pointerId &&
+        Math.hypot(event.clientX - clickStart.x, event.clientY - clickStart.y) > CLICK_MOVE_PX
+      )
+        clickStart = undefined;
+    }
+
+    function pointerUp(event: PointerEvent) {
+      pointerMove(event);
+      if (clickStart?.id === event.pointerId && activePointers.size === 1 && hitsHead(event)) triggerSmile();
+      activePointers.delete(event.pointerId);
+      clickStart = undefined;
+    }
+
+    function pointerCancel(event: PointerEvent) {
+      activePointers.delete(event.pointerId);
+      clickStart = undefined;
+    }
 
     function release() {
       if (disposed) return;
@@ -125,6 +185,8 @@ export default function VoiceAvatar({ getLevel }: { getLevel: () => number }) {
     }
 
     function cancelInteraction() {
+      activePointers.clear();
+      clickStart = undefined;
       // A lost window focus may swallow pointerup/keyup. Clear the control's pointers too.
       if (!controls || !renderer) return;
       controls.disconnect();
@@ -146,6 +208,10 @@ export default function VoiceAvatar({ getLevel }: { getLevel: () => number }) {
       }
       const step = MathUtils.degToRad(5);
       switch (event.key) {
+        case "Enter":
+        case " ":
+          if (!event.repeat) triggerSmile();
+          break;
         case "ArrowLeft":
           controls.rotateLeft(step);
           break;
@@ -175,12 +241,21 @@ export default function VoiceAvatar({ getLevel }: { getLevel: () => number }) {
         renderer = new WebGLRenderer({ antialias: true, alpha: true });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.domElement.tabIndex = 0;
-        renderer.domElement.setAttribute("role", "img");
+        renderer.domElement.setAttribute("role", "button");
         renderer.domElement.setAttribute(
           "aria-label",
-          "会話アバター。ドラッグまたは矢印キーで上下左右25度まで回転。離すと正面に戻ります。Homeキーでも正面に戻します。",
+          "会話アバター。頭や顔をクリック、またはEnter・Spaceキーで笑顔になります。ドラッグまたは矢印キーで上下左右25度まで回転。離すと正面に戻ります。Homeキーでも正面に戻します。",
         );
-        renderer.domElement.setAttribute("aria-keyshortcuts", "ArrowLeft ArrowRight ArrowUp ArrowDown Home");
+        renderer.domElement.setAttribute(
+          "aria-keyshortcuts",
+          "Enter Space ArrowLeft ArrowRight ArrowUp ArrowDown Home",
+        );
+        // Register before OrbitControls, so the hit test uses the view before returning to the front.
+        renderer.domElement.addEventListener("pointerdown", pointerDown, { signal: abort.signal });
+        renderer.domElement.addEventListener("pointermove", pointerMove, { signal: abort.signal });
+        renderer.domElement.addEventListener("pointerup", pointerUp, { signal: abort.signal });
+        renderer.domElement.addEventListener("pointercancel", pointerCancel, { signal: abort.signal });
+        renderer.domElement.addEventListener("lostpointercapture", pointerCancel, { signal: abort.signal });
         renderer.domElement.addEventListener("keydown", keyDown);
         renderer.domElement.addEventListener("keyup", keyUp);
         renderer.domElement.addEventListener("blur", releaseKeys);
@@ -212,6 +287,12 @@ export default function VoiceAvatar({ getLevel }: { getLevel: () => number }) {
           object.frustumCulled = false;
         });
         scene.add(vrm.scene);
+        // These are the face and hair roots in this project's VRoid model, including all material primitives.
+        for (const name of ["Face", "Hair"]) {
+          vrm.scene.getObjectByName(name)?.traverse((object) => {
+            if (object instanceof Mesh) headMeshes.add(object);
+          });
+        }
         // Keep the upper arms close to the body without restarting a motion loop.
         const leftArm = vrm.humanoid.getNormalizedBoneNode("leftUpperArm");
         const rightArm = vrm.humanoid.getNormalizedBoneNode("rightUpperArm");
@@ -312,9 +393,18 @@ export default function VoiceAvatar({ getLevel }: { getLevel: () => number }) {
           const level = getLevel();
           // Shut immediately when playback stops; smooth positive levels to avoid jitter.
           mouth = level <= 0 ? 0 : mouth + (level - mouth) * (1 - Math.exp(-delta * 25));
-          vrm.expressionManager?.setValue("aa", mouth);
+          const smiling = smileElapsed < SMILE_RISE_SECONDS + SMILE_HOLD_SECONDS;
+          const smileStep = delta / (smiling ? SMILE_RISE_SECONDS : SMILE_FADE_SECONDS);
+          smile = reducedMotion.matches
+            ? Number(smiling)
+            : MathUtils.clamp(smile + (smiling ? smileStep : -smileStep), 0, 1);
+          smileElapsed += delta;
+          const happiness = smile * SMILE_STRENGTH;
+          // The model's happy morph also opens the mouth and closes the eyes; avoid adding full weights twice.
+          vrm.expressionManager?.setValue("happy", happiness);
+          vrm.expressionManager?.setValue("aa", mouth * (1 - happiness));
           for (const vowel of ["ih", "ou", "ee", "oh"]) vrm.expressionManager?.setValue(vowel, 0);
-          vrm.expressionManager?.setValue("blink", blink.update(delta));
+          vrm.expressionManager?.setValue("blink", blink.update(delta) * (1 - happiness));
           vrm.expressionManager?.update();
           vrm.nodeConstraintManager?.update();
           renderer.render(scene, camera);
