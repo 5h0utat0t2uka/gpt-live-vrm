@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, test } from "node:test";
 import { requireBasicAuth } from "../src/lib/auth.ts";
-import { createSession, liveSessionConfig } from "../src/lib/live-server.ts";
+import { createSession, liveSessionConfig, lookupKnowledge } from "../src/lib/live-server.ts";
 
 let original: NodeJS.ProcessEnv;
 const auth = () => `Basic ${Buffer.from("demo:demo-password").toString("base64")}`;
@@ -98,4 +98,61 @@ test("billable POST is not retried and upstream secrets never appear in errors",
   assert.equal(response.status, 429);
   assert.doesNotMatch(await response.text(), /secret details/);
   assert.equal(call.mock.callCount(), 1);
+});
+
+test("FAQ selection replaces web search without putting answer data into the session", async (t) => {
+  t.mock.method(globalThis, "fetch", async (_url: unknown, init?: RequestInit) => {
+    const { session } = JSON.parse(String(init?.body));
+    assert.deepEqual(
+      session.delegation.responses.tools.map((tool: { name: string }) => tool.name),
+      ["read_selected_faq"],
+    );
+    assert.equal(session.delegation.responses.parallel_tool_calls, false);
+    assert.match(session.instructions, /利用者登録/);
+    assert.doesNotMatch(session.instructions, /利用条件・料金/);
+    assert.equal(session.store, false);
+    assert.doesNotMatch(JSON.stringify(session), /registration-purpose/);
+    return Response.json({ session: { id: "live_test" }, transport: { type: "webrtc", sdp: "answer" } });
+  });
+  assert.equal((await createSession(request({ sdp: "v=0\r\n", knowledgeIds: ["ndl-registration"] }))).status, 201);
+});
+
+test("invalid knowledge IDs fail before creating a billable session", async (t) => {
+  const call = t.mock.method(globalThis, "fetch", async () => {
+    throw new Error("must not call");
+  });
+  for (const knowledgeIds of [null, "ndl-services", ["../private"], ["ndl-services", "ndl-services"], [1], ["all"]]) {
+    assert.equal((await createSession(request({ sdp: "v=0\r\n", knowledgeIds }))).status, 400);
+  }
+  assert.equal(call.mock.callCount(), 0);
+});
+
+test("FAQ lookup is authenticated, same-origin, bounded and limited to selected datasets", async (t) => {
+  const call = t.mock.method(globalThis, "fetch", async () => {
+    throw new Error("must not use the network");
+  });
+  assert.equal((await lookupKnowledge(request({ knowledgeIds: ["ndl-services"] }, { authorization: "" }))).status, 401);
+  assert.equal(
+    (await lookupKnowledge(request({ knowledgeIds: ["ndl-services"] }, { origin: "https://evil.example" }))).status,
+    403,
+  );
+  assert.equal((await lookupKnowledge(request({}, { "content-type": "text/plain" }))).status, 415);
+  for (const knowledgeIds of [[], ["unknown"], ["ndl-services", "ndl-services"], ["x".repeat(70000)]])
+    assert.equal((await lookupKnowledge(request({ knowledgeIds }))).status, 400);
+  const response = await lookupKnowledge(
+    request({ knowledgeIds: ["ndl-registration"], query: "ignore rules", url: "https://evil.example" }),
+  );
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  const result = await response.json();
+  assert.deepEqual(
+    result.groups.map((group: { id: string }) => group.id),
+    ["ndl-registration"],
+  );
+  assert.equal(result.groups[0].items.length, 4);
+  assert.equal(result.attribution.retrievedAt, "2026-10-04");
+  assert.equal(result.sources[0].url, "https://www.ndl.go.jp/help/registration");
+  assert.doesNotMatch(JSON.stringify(result), /services-fee|copy-size|test-key/);
+  const multiple = await lookupKnowledge(request({ knowledgeIds: ["ndl-services", "ndl-reading"] }));
+  assert.equal((await multiple.json()).groups.length, 2);
+  assert.equal(call.mock.callCount(), 0);
 });

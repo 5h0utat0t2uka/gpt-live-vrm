@@ -1,4 +1,5 @@
 import { AudioLevel } from "./audio-level.ts";
+import type { KnowledgeId } from "./knowledge-catalog.ts";
 
 export type Caption = { id: string; text: string; start: number; end: number };
 
@@ -21,6 +22,8 @@ export type VoiceState = {
   user: Caption[];
   assistant: Caption[];
   sources: Source[];
+  knowledgeSources: Source[];
+  knowledgeLookups: number;
   searches: number;
   backend: string;
   events: { id: string; type: string }[];
@@ -36,6 +39,8 @@ export const initialVoiceState: VoiceState = {
   user: [],
   assistant: [],
   sources: [],
+  knowledgeSources: [],
+  knowledgeLookups: 0,
   searches: 0,
   backend: "",
   events: [],
@@ -98,13 +103,25 @@ export class VoiceSession {
   private closing = false;
   private seen = new Set<string>();
   private responses = new Set<string>();
+  private knowledgeIds: KnowledgeId[];
+  private toolAbort = new AbortController();
+  private functionCalls = new Set<string>();
+  private toolBatches = new Map<
+    string,
+    {
+      responseId: string;
+      calls: { callId: string; output: Promise<string> }[];
+      continuing: boolean;
+    }
+  >();
   private audio: HTMLAudioElement;
   private audioLevel = new AudioLevel();
   private onChange: (state: VoiceState) => void;
 
-  constructor(audio: HTMLAudioElement, onChange: (state: VoiceState) => void) {
+  constructor(audio: HTMLAudioElement, onChange: (state: VoiceState) => void, knowledgeIds: KnowledgeId[] = []) {
     this.audio = audio;
     this.onChange = onChange;
+    this.knowledgeIds = [...knowledgeIds];
   }
 
   private update(change: Partial<VoiceState>) {
@@ -209,7 +226,7 @@ export class VoiceSession {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ sdp }),
+        body: JSON.stringify({ sdp, knowledgeIds: this.knowledgeIds }),
         signal: this.abort.signal,
       });
       const result = await response.json();
@@ -322,7 +339,7 @@ export class VoiceSession {
         break;
       }
       case "response.event":
-        this.handleResponse(event.event);
+        this.handleResponse(event.event, event.delegation_id);
         break;
       case "error":
         this.update({
@@ -332,8 +349,9 @@ export class VoiceSession {
     }
   }
 
-  private handleResponse(value: unknown) {
+  private handleResponse(value: unknown, delegationId: unknown) {
     if (!value || typeof value !== "object" || !("type" in value)) return;
+    if (this.closing) return;
     const event = value as Record<string, unknown>;
     const response = event.response as { id?: string } | undefined;
     if (event.type === "response.web_search_call.completed") {
@@ -341,6 +359,11 @@ export class VoiceSession {
     }
     if (event.type === "response.created" && response?.id) {
       this.responses.add(response.id);
+      if (typeof delegationId === "string") {
+        const current = this.toolBatches.get(delegationId);
+        if (current?.responseId !== response.id)
+          this.toolBatches.set(delegationId, { responseId: response.id, calls: [], continuing: false });
+      }
       this.update({ backend: "回答を確認しています…" });
     }
     if (event.type === "response.web_search_call.in_progress" || event.type === "response.web_search_call.searching")
@@ -359,11 +382,35 @@ export class VoiceSession {
               : ""
             : "バックエンドの回答を完了できませんでした。",
       });
+      if (typeof delegationId === "string") {
+        const batch = this.toolBatches.get(delegationId);
+        if (batch && response?.id === batch.responseId) {
+          if (event.type === "response.completed") void this.continueWithTools(delegationId, batch);
+          else this.toolBatches.delete(delegationId);
+        }
+      }
     }
     const annotations: unknown[] = [];
     if (event.type === "response.output_text.annotation.added") annotations.push(event.annotation);
     if (event.type === "response.output_item.done") {
-      const item = event.item as { content?: { annotations?: unknown[] }[] } | undefined;
+      const item = event.item as
+        | {
+            type?: string;
+            name?: string;
+            call_id?: string;
+            arguments?: string;
+            content?: { annotations?: unknown[] }[];
+          }
+        | undefined;
+      if (item?.type === "function_call" && typeof item.call_id === "string" && !this.functionCalls.has(item.call_id)) {
+        const batch = typeof delegationId === "string" ? this.toolBatches.get(delegationId) : undefined;
+        if (!batch || batch.continuing) {
+          this.update({ message: "FAQの呼び出しを確認できませんでした。会話を終了して再接続してください。" });
+          return;
+        }
+        this.functionCalls.add(item.call_id);
+        batch.calls.push({ callId: item.call_id, output: this.executeFaq(item.name, item.arguments) });
+      }
       for (const part of item?.content ?? []) annotations.push(...(part.annotations ?? []));
     }
     const sources = new Map(this.state.sources.map((source) => [source.url, source]));
@@ -372,6 +419,82 @@ export class VoiceSession {
       if (source) sources.set(source.url, source);
     }
     if (annotations.length) this.update({ sources: [...sources.values()].slice(-30) });
+  }
+
+  private async executeFaq(name: unknown, args: unknown): Promise<string> {
+    try {
+      if (name !== "read_selected_faq" || !this.knowledgeIds.length || typeof args !== "string")
+        throw new Error("Unsupported function");
+      const parsed: unknown = JSON.parse(args);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || Object.keys(parsed).length)
+        throw new Error("Unexpected arguments");
+      this.update({ backend: "選択したFAQを参照しています…" });
+      const response = await fetch("/api/knowledge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        // The model cannot choose datasets, file paths or remote URLs.
+        body: JSON.stringify({ knowledgeIds: this.knowledgeIds }),
+        signal: AbortSignal.any([this.toolAbort.signal, AbortSignal.timeout(10_000)]),
+      });
+      if (!response.ok) throw new Error("FAQ lookup failed");
+      const result = await response.json();
+      if (!Array.isArray(result.groups) || !result.groups.length || !Array.isArray(result.sources))
+        throw new Error("Invalid FAQ result");
+      if (!this.disposed && !this.closing) {
+        const sources = new Map(this.state.knowledgeSources.map((source) => [source.url, source]));
+        for (const entry of result.sources) {
+          const source = sourceFromAnnotation({ ...entry, type: "url_citation" });
+          if (source) sources.set(source.url, source);
+        }
+        this.update({ knowledgeLookups: this.state.knowledgeLookups + 1, knowledgeSources: [...sources.values()] });
+      }
+      return JSON.stringify(result);
+    } catch {
+      if (!this.disposed && !this.closing)
+        this.update({ message: "FAQを取得できませんでした。選択した資料の内容は確認できていません。" });
+      return JSON.stringify({ error: "選択されたFAQを取得できませんでした。推測で回答しないでください。" });
+    }
+  }
+
+  private async continueWithTools(
+    delegationId: string,
+    batch: {
+      responseId: string;
+      calls: { callId: string; output: Promise<string> }[];
+      continuing: boolean;
+    },
+  ) {
+    if (batch.continuing) return;
+    batch.continuing = true;
+    if (!batch.calls.length) {
+      this.toolBatches.delete(delegationId);
+      return;
+    }
+    const outputs = await Promise.all(
+      batch.calls.map(async (call) => ({ callId: call.callId, output: await call.output })),
+    );
+    if (this.disposed || this.closing || this.toolBatches.get(delegationId) !== batch) return;
+    // Live requires all function results before one explicit response.create.
+    for (const { callId, output } of outputs) {
+      if (
+        !this.send({
+          type: "response.item.create",
+          event_id: crypto.randomUUID(),
+          item: {
+            type: "function_call_output",
+            call_id: callId,
+            output,
+          },
+        })
+      ) {
+        this.finish("FAQの結果を送信できませんでした。接続を解放しましたが、終了確認は未完了です。");
+        return;
+      }
+    }
+    this.toolBatches.delete(delegationId);
+    if (!this.send({ type: "response.create", event_id: crypto.randomUUID() }))
+      this.finish("FAQの回答を再開できませんでした。接続を解放しましたが、終了確認は未完了です。");
   }
 
   toggleMute() {
@@ -397,6 +520,8 @@ export class VoiceSession {
   stop() {
     if (this.disposed || this.closing) return;
     this.closing = true;
+    this.toolAbort.abort();
+    this.toolBatches.clear();
     this.audio.pause();
     this.microphone?.getAudioTracks().forEach((track) => {
       track.enabled = false;
@@ -445,6 +570,8 @@ export class VoiceSession {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    this.toolAbort.abort();
+    this.toolBatches.clear();
     clearTimeout(this.startupTimer);
     clearTimeout(this.closeTimer);
     clearTimeout(this.disconnectTimer);

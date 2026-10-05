@@ -3,8 +3,8 @@
 ## 構成
 
 - Next.js 16.3.6 / React 19.2.8。ローカル環境は Nix の Node.js 24.21.0 / pnpm 10.34.0。
-- 音声モデル `gpt-live-1`、声 `marin`、日本語の会話指示。
-- Responses delegation: `gpt-6-luna`、`reasoning.effort: low`、`web_search` / `tool_choice: auto`。独自の操作ツールは登録しない。
+- 音声モデル `gpt-live-1`、声 `marin`。音声側・バックエンド側とも最初の明確な発言から言語を判断し、相づちを含めユーザーの質問と同じ言語で回答するよう指示する。日本語の初期指定は設けない。回答言語の明示指定を優先し、曖昧な相づち・固有名詞だけでは切り替えない。実際の言語選択はモデルの動作に依存するため、各言語の実音声で確認する。
+- Responses delegation: `gpt-6-luna`、`reasoning.effort: low`。知識が未選択なら `web_search`、選択ありなら読み取り専用の `read_selected_faq` を利用する（`tool_choice: auto`）。[FAQデモの構成・出典・確認手順](./knowledge-demo.md)。
 - `POST /api/session` がサーバーの API キーで `POST /v1/live/sessions` を呼び、SDP answer を返す。ブラウザからモデルやプロンプトを指定できない。
 - 音声はブラウザと OpenAI 間の WebRTC メディアトラックで送受信。DataChannel は字幕、検索結果、状態通知に利用する。
 - OpenAI SDK は使用せず、ブラウザ API とサーバーの fetch を使用。

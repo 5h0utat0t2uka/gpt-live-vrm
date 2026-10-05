@@ -24,6 +24,7 @@
           fixedNode.pnpm
           pkgs.age
           pkgs.betterleaks
+          pkgs.biome
           pkgs.prek
           pkgs.semgrep
           pkgs.sops

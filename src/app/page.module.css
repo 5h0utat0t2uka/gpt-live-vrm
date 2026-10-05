@@ -12,10 +12,9 @@
   /*inset-block-end: calc(env(safe-area-inset-bottom, 0px) + 24px);*/
   inset-block-end: 24px;
   display: grid;
-  grid-template-columns: repeat(3,1fr);
+  grid-template-columns: repeat(4, 1fr);
   block-size: var(--nav-height);
   place-content: center;
-  gap: 24px;
   gap: 8px;
   padding: 8px;
   border-radius: calc(infinity * 1px);
@@ -27,13 +26,13 @@
     flex-direction: column;
     align-items: center;
     gap: 4px;
-    padding: 8px 28px;
+    padding: 8px 24px;
     border: none;
     border-radius: calc(infinity * 1px);
     cursor: pointer;
     background: none;
     color: black;
-    @media(any-hover: hover) {
+    @media (any-hover: hover) {
       &:hover {
         color: #0b7aef;
         background: color-mix(in oklch, black 5%, transparent);
@@ -91,11 +90,13 @@
       padding: 0.5em 1em;
       border-radius: calc(infinity * 1px);
       font-size: 0.8rem;
-      &[data-phase="idle"], &[data-phase="connecting"] {
+      &[data-phase="idle"],
+      &[data-phase="connecting"] {
         color: #0b7aef;
         background: #d7e4ff;
       }
-      &[data-phase="closing"], &[data-phase="ended"] {
+      &[data-phase="closing"],
+      &[data-phase="ended"] {
         color: #5e5e5e;
         background: #d2d2d2;
       }
@@ -130,7 +131,7 @@
         opacity: 0.4;
         cursor: not-allowed;
       }
-      @media(any-hover: hover) {
+      @media (any-hover: hover) {
         &:not(:disabled):hover {
           background: black;
           color: white;
@@ -142,9 +143,49 @@
 
 .main:has(> [id="controls-panel"]:popover-open) .nav > button[popovertarget="controls-panel"],
 .main:has(> [id="transcript-panel"]:popover-open) .nav > button[popovertarget="transcript-panel"],
-.main:has(> [id="sources-panel"]:popover-open) .nav > button[popovertarget="sources-panel"] {
+.main:has(> [id="sources-panel"]:popover-open) .nav > button[popovertarget="sources-panel"],
+.main:has(> [id="knowledge-panel"]:popover-open) .nav > button[popovertarget="knowledge-panel"] {
   color: #0b7aef;
   background: #d7e4ff;
+}
+
+.mode {
+  margin-block: 8px 16px;
+  font-size: 0.8rem;
+  a {
+    text-decoration: underline;
+  }
+}
+
+.knowledgeOptions {
+  border: 0;
+  padding: 0;
+  margin-block: 16px;
+  label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-block: 8px;
+    cursor: pointer;
+  }
+  input {
+    inline-size: 20px;
+    block-size: 20px;
+    flex-shrink: 0;
+    accent-color: #0b7aef;
+  }
+  span {
+    line-height: 1.2;
+    small {
+      color: gray;
+      display: block;
+    }
+  }
+
+  &:disabled label {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 }
 
 .notice {

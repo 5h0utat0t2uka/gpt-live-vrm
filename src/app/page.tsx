@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { type KnowledgeId, knowledgeAttribution, knowledgeCatalog } from "../lib/knowledge-catalog.ts";
 import { initialVoiceState, mergeCaptions, VoiceSession } from "../lib/voice-session.ts";
 import styles from "./page.module.css";
 
@@ -44,6 +45,7 @@ function Captions({ captions }: { captions: ReturnType<typeof mergeCaptions> }) 
 
 export default function Home() {
   const [state, setState] = useState(initialVoiceState);
+  const [knowledgeIds, setKnowledgeIds] = useState<KnowledgeId[]>([]);
   const audio = useRef<HTMLAudioElement>(null);
   const session = useRef<VoiceSession | null>(null);
   const getOutputLevel = useCallback(() => session.current?.getOutputLevel() ?? 0, []);
@@ -61,7 +63,7 @@ export default function Home() {
   function start() {
     if (!audio.current || active) return;
     session.current?.dispose();
-    const connection = new VoiceSession(audio.current, setState);
+    const connection = new VoiceSession(audio.current, setState, knowledgeIds);
     session.current = connection;
     void connection.start();
   }
@@ -105,6 +107,23 @@ export default function Home() {
           </svg>
           <span className={styles.label}>参照</span>
         </button>
+        <button type="button" popoverTarget="knowledge-panel">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width={24}
+            height={24}
+            viewBox="0 0 24 24"
+            role="img"
+            aria-label="knowledge"
+          >
+            <path
+              fill="currentColor"
+              d="M14.5 2a3.25 3.25 0 0 1 3.218 2.795a3.876 3.876 0 0 1 2.08 6.633A4 4 0 0 1 22 15v.25a4 4 0 0 1-3.367 3.95c-.431 1.613-1.901 2.8-3.627 2.8c-1.228 0-2.32-.59-3.006-1.504A3.75 3.75 0 0 1 8.994 22c-1.726 0-3.195-1.187-3.627-2.8A4 4 0 0 1 2 15.25V15a4 4 0 0 1 2.2-3.572a3.876 3.876 0 0 1 2.082-6.633A3.25 3.25 0 0 1 12 3.174A3.24 3.24 0 0 1 14.5 2m-5 1.5a1.75 1.75 0 0 0-1.75 1.75v.25a.75.75 0 0 1-.75.75h-.125a2.375 2.375 0 1 0 0 4.75h.375a.75.75 0 0 1 0 1.5h-.375l-.085-.003l-.04.003H6A2.5 2.5 0 0 0 3.5 15v.25a2.5 2.5 0 0 0 2.5 2.5a.75.75 0 0 1 .719.542l.026.14h.002A2.276 2.276 0 0 0 8.994 20.5a2.255 2.255 0 0 0 2.256-2.25V5.241A1.75 1.75 0 0 0 9.5 3.5m5 0a1.75 1.75 0 0 0-1.75 1.741V18.25c0 1.24 1.011 2.25 2.256 2.25a2.276 2.276 0 0 0 2.247-2.068h.002l.026-.14A.75.75 0 0 1 18 17.75a2.5 2.5 0 0 0 2.5-2.5V15a2.5 2.5 0 0 0-2.5-2.5h-.75q-.02 0-.041-.003l-.084.003h-.375a.75.75 0 0 1 0-1.5h.375a2.375 2.375 0 1 0 0-4.75H17a.75.75 0 0 1-.75-.75v-.25A1.75 1.75 0 0 0 14.5 3.5"
+            ></path>
+          </svg>
+          {/*<span className={styles.label}>知識{knowledgeIds.length > 0 ? ` (${knowledgeIds.length})` : ""}</span>*/}
+          <span className={styles.label}>知識</span>
+        </button>
       </nav>
 
       <section id="controls-panel" popover="auto" className={styles.panel} aria-labelledby="controls-heading">
@@ -131,6 +150,14 @@ export default function Home() {
           <strong data-phase={state.phase}>{phaseLabels[state.phase]}</strong>
           <p>{state.message}</p>
         </div>
+        {/*<p className={styles.mode}>
+          {knowledgeIds.length ? "選択したFAQから回答します（Web検索なし）。" : "Web検索を利用できます。"}
+        </p>*/}
+        {state.backend && (
+          <p className={styles.mode} role="status">
+            {state.backend}
+          </p>
+        )}
         <div className={styles.buttons}>
           <button type="button" className={styles.start} onClick={start} disabled={active}>
             開始
@@ -192,7 +219,7 @@ export default function Home() {
         aria-labelledby="sources-heading"
       >
         <div className={styles.heading}>
-          <h2 id="sources-heading">参照サイト</h2>
+          <h2 id="sources-heading">参照情報</h2>
           <button
             className={styles.close}
             type="button"
@@ -210,13 +237,32 @@ export default function Home() {
             </svg>
           </button>
         </div>
-        {state.sources.length === 0 && (
+        {state.knowledgeSources.length > 0 && (
+          <div>
+            <h3>取得したFAQ</h3>
+            <p className={styles.mode}>回答に使われていない項目も含みます。取得回数：{state.knowledgeLookups}</p>
+            <ul>
+              {state.knowledgeSources.map((source) => (
+                <li key={source.url}>
+                  <a href={source.url} target="_blank" rel="noopener noreferrer">
+                    {source.title} ↗
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <p className={styles.mode}>
+              {knowledgeAttribution.notice} 確認日：{knowledgeAttribution.retrievedAt}
+            </p>
+          </div>
+        )}
+        {state.sources.length === 0 && state.knowledgeSources.length === 0 && (
           <p>
             {state.searches > 0
               ? "検索は完了しました。参照 URL はまだ届いていません。天気など、参照 URL が返されない結果もあります。"
-              : "WEBの参照はまだありません。"}
+              : "参照情報はまだありません。"}
           </p>
         )}
+        {state.sources.length > 0 && <h3>回答の出典</h3>}
         <ul>
           {state.sources.map((source) => (
             <li key={source.url}>
@@ -226,6 +272,57 @@ export default function Home() {
             </li>
           ))}
         </ul>
+      </section>
+      <section id="knowledge-panel" popover="auto" className={styles.panel} aria-labelledby="knowledge-heading">
+        <div className={styles.heading}>
+          <h2 id="knowledge-heading">知識</h2>
+          <button
+            className={styles.close}
+            type="button"
+            popoverTarget="knowledge-panel"
+            popoverTargetAction="hide"
+            aria-label="知識を閉じる"
+          >
+            <svg role="img" aria-label="close" width={24} height={24} viewBox="0 0 24 24">
+              <path
+                fill="currentColor"
+                fillRule="evenodd"
+                d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12m7.707-3.707a1 1 0 0 0-1.414 1.414L10.586 12l-2.293 2.293a1 1 0 1 0 1.414 1.414L12 13.414l2.293 2.293a1 1 0 0 0 1.414-1.414L13.414 12l2.293-2.293a1 1 0 0 0-1.414-1.414L12 10.586z"
+                clipRule="evenodd"
+              ></path>
+            </svg>
+          </button>
+        </div>
+        <p id="knowledge-description" className={styles.mode}>
+          <a href={knowledgeAttribution.url} target="_blank" rel="noopener noreferrer">
+            国立国会図書館
+          </a>
+          のFAQを元に、デモ用に質問と回答を抜粋・要約したデータを利用しています。
+          <br />
+          選択すると、そのFAQだけを参照して回答します。未選択の場合はWeb検索を利用できます。変更は会話の終了後に行えます。
+        </p>
+        <fieldset className={styles.knowledgeOptions} disabled={active} aria-describedby="knowledge-description">
+          {knowledgeCatalog.map((entry) => (
+            <label key={entry.id}>
+              <input
+                type="checkbox"
+                checked={knowledgeIds.includes(entry.id)}
+                onChange={(event) => {
+                  setKnowledgeIds((current) =>
+                    event.target.checked ? [...current, entry.id] : current.filter((id) => id !== entry.id),
+                  );
+                }}
+              />
+              <span>
+                {entry.title}
+                <small>{entry.description}</small>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+        {/*<p className={styles.mode}>
+          {knowledgeAttribution.notice}
+        </p>*/}
       </section>
     </main>
   );
