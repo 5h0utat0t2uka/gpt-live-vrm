@@ -1,0 +1,113 @@
+[
+  {
+    "id": "ndl-services",
+    "items": [
+      {
+        "id": "services-age",
+        "question": "国立国会図書館は誰でも利用できますか？",
+        "answer": "東京本館・関西館は原則として満18歳以上なら国籍を問わず利用できます。書庫内の資料の利用などには利用者登録が必要です。国際子ども図書館には年齢制限がありませんが、一部の資料室では手続きが必要です。",
+        "sourceUrl": "https://www.ndl.go.jp/help/services"
+      },
+      {
+        "id": "services-under18",
+        "question": "18歳未満でも東京本館・関西館の資料を利用できますか？",
+        "answer": "学校のレポートや卒業論文などの調査研究で、国立国会図書館にしかない資料が必要と認められる場合は、申請書を提出して承認を受けることで利用できます。まずは近隣や学校の図書館で利用できるか相談してください。",
+        "sourceUrl": "https://www.ndl.go.jp/help/services"
+      },
+      {
+        "id": "services-fee",
+        "question": "利用には料金がかかりますか？",
+        "answer": "入館、資料の閲覧、利用者登録は無料です。複写サービスは有料です。",
+        "sourceUrl": "https://www.ndl.go.jp/help/services"
+      },
+      {
+        "id": "services-availability",
+        "question": "来館すればどの資料でもすぐに見られますか？",
+        "answer": "館によって所蔵資料が異なり、利用に制約のある資料もあるため、すぐに利用できるとは限りません。事前に国立国会図書館サーチで調べるか、図書館へ問い合わせてください。",
+        "sourceUrl": "https://www.ndl.go.jp/help/services"
+      },
+      {
+        "id": "services-shelves",
+        "question": "地域の図書館と利用方法は違いますか？",
+        "answer": "個人への館外貸出はありません。資料の多くは書庫にあり、書棚から直接選ぶのではなく、国立国会図書館サーチなどで検索して利用を申し込みます。",
+        "sourceUrl": "https://www.ndl.go.jp/help/services"
+      },
+      {
+        "id": "services-preparation",
+        "question": "来館前にどんな準備をするとよいですか？",
+        "answer": "事前に利用したい資料を国立国会図書館サーチで調べると効率的です。資料の受取りや複写には時間がかかる場合があるため、時間に余裕を持って来館してください。来館せずに利用できるデータベースや遠隔複写サービスもあります。",
+        "sourceUrl": "https://www.ndl.go.jp/help/services"
+      }
+    ]
+  },
+  {
+    "id": "ndl-registration",
+    "items": [
+      {
+        "id": "registration-purpose",
+        "question": "利用者登録は何のために必要ですか？",
+        "answer": "貴重な資料を長期に保存しながら利用してもらうため、書庫内の資料の利用には登録を求めています。利用者の利便性向上も目的としています。",
+        "sourceUrl": "https://www.ndl.go.jp/help/registration"
+      },
+      {
+        "id": "registration-benefits",
+        "question": "登録するとどんなサービスが利用できますか？",
+        "answer": "東京本館・関西館での書庫内資料の閲覧・複写のほか、後日郵送複写や一部資料の取寄せ閲覧などがあります。インターネット経由の複写申込みや個人向けデジタル化資料送信サービスも登録利用者向けです。ただし登録種別によって利用できるサービスが異なります。",
+        "sourceUrl": "https://www.ndl.go.jp/help/registration"
+      },
+      {
+        "id": "registration-without",
+        "question": "登録しなくても利用できる資料はありますか？",
+        "answer": "東京本館・関西館では、閲覧室・専門室にある資料の閲覧や即日複写、館内端末で利用できるデジタル化資料・電子情報の閲覧やプリントアウトができます。書庫内の資料は利用できません。",
+        "sourceUrl": "https://www.ndl.go.jp/help/registration"
+      },
+      {
+        "id": "registration-daycard",
+        "question": "当日利用カードで何ができますか？",
+        "answer": "東京本館・関西館で、閲覧室・専門室に置かれた資料の閲覧・即日複写と、館内端末で利用できるデジタル化資料・電子情報の閲覧・プリントアウトができます。",
+        "sourceUrl": "https://www.ndl.go.jp/help/registration"
+      }
+    ]
+  },
+  {
+    "id": "ndl-reading",
+    "items": [
+      {
+        "id": "reading-loan",
+        "question": "資料を借りて家に持ち帰れますか？",
+        "answer": "個人への貸出は行っていません。資料は館内で利用してください。",
+        "sourceUrl": "https://www.ndl.go.jp/help/reading"
+      },
+      {
+        "id": "reading-place",
+        "question": "館内ではどこで資料を読めますか？",
+        "answer": "東京本館では近くの閲覧室などを利用してください。混雑時には利用者端末席での資料閲覧を控えてください。関西館では閲覧室を利用し、4階カフェテリアでは資料を閲覧できません。",
+        "sourceUrl": "https://www.ndl.go.jp/help/reading"
+      },
+      {
+        "id": "reading-original",
+        "question": "デジタル化された資料の原本を見ることはできますか？",
+        "answer": "原本保存のため、デジタル化された資料はデジタル画像での利用を案内しています。",
+        "sourceUrl": "https://www.ndl.go.jp/help/reading"
+      },
+      {
+        "id": "reading-return",
+        "question": "資料はどこへ返却しますか？",
+        "answer": "東京本館・関西館とも、受け取ったカウンターへ返却してください。関西館の閲覧室にある資料は所定の返却棚へ置いてください。",
+        "sourceUrl": "https://www.ndl.go.jp/help/reading"
+      },
+      {
+        "id": "copy-size",
+        "question": "コピーの拡大・縮小や用紙サイズを指定できますか？",
+        "answer": "用紙の大きさは原則として複写料金表の範囲内で資料のサイズに合わせて図書館が指定します。拡大・縮小などの個別の希望には対応していません。",
+        "sourceUrl": "https://www.ndl.go.jp/help/fee"
+      },
+      {
+        "id": "copy-restrictions",
+        "question": "複写にはどんな制約がありますか？",
+        "answer": "著作権法などの関係法規に基づく制約があります。資料保存のため複写できない場合や方法が制限される場合もあります。1回の申込みの冊数・ページ数などにも制限があり、特別な複写方法や提供方法の指定には対応していません。",
+        "sourceUrl": "https://www.ndl.go.jp/help/fee"
+      }
+    ]
+  }
+]

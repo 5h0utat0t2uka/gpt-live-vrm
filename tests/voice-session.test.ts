@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, test } from "node:test";
+import type { KnowledgeId } from "../src/lib/knowledge-catalog.ts";
 import {
   appendCaption,
   mergeCaptions,
@@ -327,4 +328,145 @@ test("hosted search without citations remains visible and later citations dedupl
   });
   assert.equal(state.sources.length, 1);
   assert.equal(state.sources[0].title, "公式記事");
+});
+
+const faqResult = {
+  groups: [{ id: "ndl-services", items: [{ id: "services-fee", answer: "入館は無料です。" }] }],
+  sources: [{ url: "https://www.ndl.go.jp/help/services", title: "利用案内" }],
+};
+const tick = () => new Promise((resolve) => setImmediate(resolve));
+
+function backend(event: Record<string, unknown>, delegationId = "delegation_1") {
+  Peer.current.channel.emit({ type: "response.event", delegation_id: delegationId, event });
+}
+
+function functionCall(callId = "call_1", name = "read_selected_faq", args = "{}") {
+  backend({
+    type: "response.output_item.done",
+    item: { type: "function_call", call_id: callId, name, arguments: args },
+  });
+}
+
+async function startKnowledge() {
+  session.dispose();
+  const ids: KnowledgeId[] = ["ndl-services"];
+  session = new VoiceSession(
+    audio as unknown as HTMLAudioElement,
+    (next) => {
+      state = next;
+    },
+    ids,
+  );
+  ids.push("ndl-reading"); // A caller's later mutation cannot change this session's selection.
+  await session.start();
+  Peer.current.channel.emit({ type: "session.started" });
+  backend({ type: "response.created", response: { id: "response_1" } });
+}
+
+test("FAQ functions use the frozen selection, wait for all outputs, deduplicate and continue exactly once", async (t) => {
+  const originalFetch = globalThis.fetch;
+  const calls: string[] = [];
+  const resolvers: ((value: Response) => void)[] = [];
+  t.mock.method(globalThis, "fetch", async (url: unknown, init?: RequestInit) => {
+    assert.deepEqual(JSON.parse(String(init?.body)).knowledgeIds, ["ndl-services"]);
+    if (url === "/api/session") return originalFetch(url, init);
+    assert.equal(url, "/api/knowledge");
+    calls.push(String(url));
+    return new Promise<Response>((resolve) => {
+      resolvers.push(resolve);
+    });
+  });
+  await startKnowledge();
+  functionCall();
+  functionCall();
+  functionCall("call_2");
+  assert.equal(calls.length, 2);
+  // Forwarded response.output is empty even when functions await results.
+  backend({ type: "response.completed", response: { id: "response_1", output: [] } });
+  resolvers[1](Response.json(faqResult));
+  await tick();
+  assert.equal(Peer.current.channel.sent.length, 0);
+  resolvers[0](Response.json(faqResult));
+  await tick();
+  assert.deepEqual(
+    Peer.current.channel.sent.map((event) => event.type),
+    ["response.item.create", "response.item.create", "response.create"],
+  );
+  const item = Peer.current.channel.sent[0].item as { call_id: string; output: string };
+  assert.equal(item.call_id, "call_1");
+  assert.equal(JSON.parse(item.output).groups[0].id, "ndl-services");
+  backend({ type: "response.completed", response: { id: "response_1", output: [] } });
+  functionCall();
+  await tick();
+  assert.equal(Peer.current.channel.sent.length, 3);
+  assert.equal(state.knowledgeSources.length, 1);
+  assert.equal(state.sources.length, 0); // Retrieved FAQ is distinct from citations.
+  assert.equal(state.knowledgeLookups, 2);
+});
+
+test("unsupported functions and model-chosen dataset arguments cannot fetch data", async (t) => {
+  await startKnowledge();
+  const call = t.mock.method(globalThis, "fetch", async () => {
+    throw new Error("must not fetch");
+  });
+  functionCall("bad_name", "other");
+  functionCall("bad_args", "read_selected_faq", '{"knowledgeIds":["ndl-reading"]}');
+  backend({ type: "response.completed", response: { id: "response_1" } });
+  await tick();
+  assert.equal(call.mock.callCount(), 0);
+  assert.equal(Peer.current.channel.sent.length, 3);
+  for (const event of Peer.current.channel.sent.slice(0, 2))
+    assert.ok(JSON.parse((event.item as { output: string }).output).error);
+});
+
+test("FAQ lookup failure returns an explicit error to the backend without falling back to search", async (t) => {
+  await startKnowledge();
+  t.mock.method(globalThis, "fetch", async () => new Response("upstream secret", { status: 503 }));
+  functionCall();
+  backend({ type: "response.completed", response: { id: "response_1" } });
+  await tick();
+  const output = (Peer.current.channel.sent[0].item as { output: string }).output;
+  assert.match(JSON.parse(output).error, /取得できません/);
+  assert.doesNotMatch(output, /upstream secret/);
+  assert.equal(state.knowledgeLookups, 0);
+  assert.equal(state.searches, 0);
+});
+
+test("ending a call aborts a pending FAQ lookup and never resumes a closed conversation", async (t) => {
+  await startKnowledge();
+  let signal: AbortSignal | undefined;
+  let resolve: (response: Response) => void = () => {};
+  t.mock.method(globalThis, "fetch", async (_url: unknown, init?: RequestInit) => {
+    signal = init?.signal ?? undefined;
+    return new Promise<Response>((done) => {
+      resolve = done;
+    });
+  });
+  functionCall();
+  backend({ type: "response.completed", response: { id: "response_1" } });
+  session.stop();
+  assert.equal(signal?.aborted, true);
+  resolve(Response.json(faqResult));
+  await tick();
+  assert.deepEqual(Peer.current.channel.sent, [{ type: "session.close" }]);
+  assert.equal(state.knowledgeLookups, 0);
+});
+
+test("cancelled backend work discards late FAQ results instead of continuing another response", async (t) => {
+  await startKnowledge();
+  let resolve: (response: Response) => void = () => {};
+  t.mock.method(
+    globalThis,
+    "fetch",
+    async () =>
+      new Promise<Response>((done) => {
+        resolve = done;
+      }),
+  );
+  functionCall();
+  backend({ type: "response.completed", response: { id: "response_1" } });
+  backend({ type: "response.cancelled", response: { id: "response_1" } });
+  resolve(Response.json(faqResult));
+  await tick();
+  assert.deepEqual(Peer.current.channel.sent, []);
 });
